@@ -6,7 +6,7 @@ import (
 	"github.com/caos/oidc/pkg/client/rp"
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
-	"github.com/labstack/echo/v4"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"

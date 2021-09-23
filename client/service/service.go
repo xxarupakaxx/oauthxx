@@ -97,7 +97,7 @@ func main() {
 		}
 	})
 
-	http.HandlerFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		tpl:= `
 	<!DOCTYPE html>
 	<html>

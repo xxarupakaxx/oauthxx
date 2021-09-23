@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/caos/oidc/pkg/client/profile"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
@@ -95,4 +96,86 @@ func main() {
 			w.Write(data)
 		}
 	})
+
+	http.HandlerFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		tpl:= `
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<meta charset="UTF-8">
+			<title>Test</title>
+		</head>
+		<body>
+			<form method="POST" action="/test">
+				<label for="url">URL for test:</label>
+				<input type="text" id="url" name="url" width="200px">
+				<button type="submit">Test Token</button>
+			</form>
+			{{if .URL}}
+			<p>
+				Result for {{.URL}}: {{.Response}}
+			</p>
+			{{end}}
+		</body>
+	</html>`
+
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w,err.Error(),http.StatusInternalServerError)
+			return
+		}
+		testURL := r.Form.Get("url")
+		var data struct{
+			URL string
+			Response interface{}
+
+		}
+
+		if testURL != "" {
+			data.URL = testURL
+			data.Response,err = callExampleEndpoint(client,testURL)
+			if err != nil {
+				data.Response = err
+			}
+
+		}
+		t,err := template.New("login").Parse(tpl)
+		if err != nil {
+			http.Error(w,err.Error(),http.StatusInternalServerError)
+			return
+		}
+		err = t.Execute(w,data)
+		if err != nil {
+			http.Error(w,err.Error(),http.StatusInternalServerError)
+		}
+	})
+	lis := fmt.Sprintf("127.0.0.1:"+port)
+	logrus.Infof("listening on http://%s/",lis)
+	logrus.Fatalln(http.ListenAndServe("127.0.0.1:"+port,nil))
+}
+
+func callExampleEndpoint(client *http.Client, testURL string) (interface{}, error) {
+	req,err := http.NewRequest("GET",testURL,nil)
+	if err != nil {
+		return nil,err
+	}
+
+	resp ,err := client.Do(req)
+	if err != nil {
+		return nil,err
+	}
+
+	defer resp.Body.Close()
+
+	body,err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("http status not ok: %s %s",resp.Status,body)
+	}
+	if strings.HasPrefix(resp.Header.Get("Content-type"), "text/plain") {
+		return string(body),nil
+	}
+	return body,err
 }

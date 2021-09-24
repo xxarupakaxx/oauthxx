@@ -19,7 +19,7 @@ var client *http.Client = http.DefaultClient
 func main() {
 	keyPath := os.Getenv("KEY_PATH")
 	issuer := os.Getenv("ISSUER")
-	port := os.Getenv("PORT")
+	port := "3001"//os.Getenv("PORT")
 	scopes := strings.Split(os.Getenv("SCOPES")," ")
 
 	if keyPath != "" {

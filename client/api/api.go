@@ -27,7 +27,7 @@ func main() {
 		logrus.Fatalln(".env no such file")
 	}
 	keyPath := os.Getenv("KEY" )
-	port := os.Getenv("PORT")
+	port := "3001"//os.Getenv("PORT")
 	issuer := os.Getenv("ISSUER")
 
 	provider ,err := rs.NewResourceServerFromKeyFile(issuer,keyPath)

@@ -21,7 +21,7 @@ var (
 func main() {
 	clientId :=os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
-	port :=os.Getenv("PORT")
+	port :="3001"//os.Getenv("PORT")
 
 	rpConfig := &oauth2.Config{
 		ClientID:     clientId,

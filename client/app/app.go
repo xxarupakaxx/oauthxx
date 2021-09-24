@@ -24,7 +24,7 @@ func main() {
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	keyPath := os.Getenv("KEY_PATH")
 	issuer := os.Getenv("ISSUER")
-	port := os.Getenv("PORT")
+	port := "3001"//os.Getenv("PORT")
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)

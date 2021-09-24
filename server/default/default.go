@@ -38,7 +38,7 @@ func main() {
 	<-ctx.Done()
 }
 
-func HandleLogin(w http.ResponseWriter, r *http.Request) {
+func HandleLogin(w http.ResponseWriter, _ *http.Request) {
 	tpl :=  `
 	<!DOCTYPE html>
 	<html>
@@ -64,7 +64,10 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func HandleCallback(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	err := r.ParseForm()
+	if err != nil {
+		return
+	}
 	client := r.FormValue("client")
 	http.Redirect(w, r, "/authorize/callback?id="+client, http.StatusFound)
 }

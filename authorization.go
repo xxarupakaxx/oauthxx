@@ -211,12 +211,21 @@ func Token(c echo.Context) error {
 			if err != nil {
 				return c.String(http.StatusInternalServerError,err.Error())
 			}
+			fmt.Printf("Issuing access token %s \n with scope %s",accessToken,csope)
 
-
-
+			tokenRes := struct {
+				accessToken string
+				tokenType string
+				scope string
+			}{
+				accessToken: accessToken,
+				tokenType:   "Bearer",
+				scope:       csope,
+			}
+			return c.JSON(http.StatusOK,tokenRes)
 		}
 	}
-
+	return c.String(http.StatusOK,"OK")
 }
 func contains(s []string, e string) bool {
 	for _, v := range s {

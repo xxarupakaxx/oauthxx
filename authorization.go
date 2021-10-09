@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"io"
 	"log"
 	"math/rand"
@@ -46,6 +47,7 @@ type ClientInfo struct {
 	RedirectURI   string
 	ReqID         string
 	URL           *url.URL
+	Code          string
 }
 
 var CI = ClientInfo{
@@ -57,13 +59,6 @@ var CI = ClientInfo{
 	ClientURI:     "http://localhost:9000",
 	RedirectURI:   "http://localhost:9000/callback",
 }
-
-type ApproveInfo struct {
-	AuthorizationEndpointRequest url.Values
-	Scope                        []string
-}
-
-var codes map[string]ApproveInfo
 
 func (t *AuthTemplate) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	return t.templates.ExecuteTemplate(w, name, data)
@@ -143,7 +138,6 @@ func authorize(c echo.Context) error {
 func approve(c echo.Context) error {
 	query := CI.URL.Query()
 	if query.Get("response_type") == "code" {
-
 		code, err := MakeRandomStr(8)
 		if err != nil {
 			return c.Render(http.StatusInternalServerError, "error", Errors{err.Error()})
@@ -154,23 +148,12 @@ func approve(c echo.Context) error {
 			urlParsed := query.Get("redirect_uri")
 			urlParsed += "?state="
 			urlParsed += query.Get("state")
-			fmt.Println(urlParsed)
-			if err != nil {
-				e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
-				return c.Render(http.StatusBadRequest, "error", e)
-			}
+			urlParsed += "&code="
+			urlParsed += code
+
+			CI.Code = code
 			return c.Redirect(http.StatusMovedPermanently, urlParsed)
 		}
-		codes[code] = ApproveInfo{
-			AuthorizationEndpointRequest: query,
-			Scope:                        query["scope"],
-		}
-		urlParsed := query.Get("redirect_uri")
-		if err != nil {
-			e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
-			return c.Render(http.StatusBadRequest, "error", e)
-		}
-		return c.Redirect(http.StatusMovedPermanently, urlParsed)
 	}
 	return c.Redirect(http.StatusMovedPermanently, "http://localhost:9000")
 }
@@ -191,15 +174,16 @@ func Token(c echo.Context) error {
 		e := Errors{fmt.Sprintf("Mismatched client secret, expected %s got %s", CI.ClientSecret, clientInfo[1])}
 		return c.Render(http.StatusUnauthorized, "error", e)
 	}
-	if c.Request().URL.Query().Get("grant_type") == "authorization_code" {
-		code := codes[c.Request().URL.Query().Get("code")]
-		fmt.Println("codeの中身", code.AuthorizationEndpointRequest, code.Scope)
-		if code.AuthorizationEndpointRequest != nil {
+
+	if c.FormValue("grant_type") == "authorization_code" {
+		fmt.Printf("CI.code = %s FormValeCode = %s", CI.Code, c.FormValue("code"))
+		if c.FormValue("code") == CI.Code {
+
 			accessToken, err := MakeRandomStr(16)
 			if err != nil {
 				log.Println(err.Error())
 			}
-			csope := strings.Join(code.Scope, " ")
+			csope := strings.Join(CI.Scope, " ")
 			cli := DBconnect()
 			collection := cli.Database("grpc").Collection("test")
 			_, err = collection.InsertOne(context.Background(), struct {
@@ -212,20 +196,20 @@ func Token(c echo.Context) error {
 				scope:       csope,
 			})
 			if err != nil {
-				return c.JSON(http.StatusInternalServerError, err.Error())
+				return fmt.Errorf("aiueo")
 			}
 			fmt.Printf("Issuing access token %s \n with scope %s", accessToken, csope)
 
 			tokenRes := struct {
-				accessToken string
-				tokenType   string
-				scope       string
+				AccessToken string `json:"access_token"`
+				TokenType   string `json:"token_type"`
+				Scope       string `json:"scope"`
 			}{
-				accessToken: accessToken,
-				tokenType:   "Bearer",
-				scope:       csope,
+				AccessToken: accessToken,
+				TokenType:   "Bearer",
+				Scope:       csope,
 			}
-			fmt.Println("aaaaaaaaaaa", tokenRes.accessToken)
+
 			return c.JSON(http.StatusOK, tokenRes)
 		}
 	}
@@ -267,7 +251,8 @@ func DBconnect() *mongo.Client {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cli.Disconnect(ctx)
-
+	if err = cli.Ping(ctx, readpref.Primary()); err == nil {
+		log.Println("success")
+	}
 	return cli
 }

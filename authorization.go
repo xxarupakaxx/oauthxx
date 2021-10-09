@@ -1,11 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"text/template"
 )
 type AuthTemplate struct {
@@ -84,6 +87,7 @@ func index(c echo.Context) error {
 }
 
 func authorize(c echo.Context) error {
+	var reqid string
 	uri,err:=url.ParseRequestURI(c.Request().RequestURI)
 	if err!=nil{
 		return c.String(http.StatusInternalServerError,err.Error())
@@ -96,10 +100,29 @@ func authorize(c echo.Context) error {
 		e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ",CI.RedirectURI)}
 		return c.Render(http.StatusBadRequest,"error",e)
 	}else {
-
+		rscope := strings.Join(q["scope"],",")
+		cscope := strings.Join(CI.Scope,",")
+		if !strings.Contains(rscope,cscope)  {
+			urlParsed,err := url.Parse(q.Get("redirect_uri"))
+			if err != nil {
+				e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ",CI.RedirectURI)}
+				return c.Render(http.StatusBadRequest,"error",e)
+			}
+			c.Redirect(http.StatusOK,urlParsed.String())
+		}
+		reqid,err = MakeRandomStr(8)
+		if err != nil {
+			return c.Render(http.StatusBadRequest,"error",Errors{err.Error()})
+		}
 	}
 
-	return c.Render(http.StatusOK,"approve",CI)
+	return c.Render(http.StatusOK,"approve", struct {
+		Client string
+		ClientSecret string
+		RedirectURI string
+		Scope  []string
+		reqID  string
+	}{Client: CI.Client,ClientSecret: CI.ClientSecret,RedirectURI: CI.RedirectURI,Scope: CI.Scope,reqID: reqid})
 }
 func contains(s []string, e string) bool {
 	for _, v := range s {
@@ -108,4 +131,21 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+func MakeRandomStr(digit uint32) (string, error) {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	// 乱数を生成
+	b := make([]byte, digit)
+	if _, err := rand.Read(b); err != nil {
+		return "", errors.New("unexpected error...")
+	}
+
+	// letters からランダムに取り出して文字列を生成
+	var result string
+	for _, v := range b {
+		// index が letters の長さに収まるように調整
+		result += string(letters[int(v)%len(letters)])
+	}
+	return result, nil
 }

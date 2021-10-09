@@ -51,7 +51,7 @@
         {{end}}
 
         <form class="form" action="/approve" method="POST">
-            <input type="hidden" name="reqid" value="<%- reqid %>">
+            <input type="hidden" name="ReqID" value="{{.ReqID}}">
             {{if .Scope}}
             <p>The client is requesting access to the following:</p>
             <ul>

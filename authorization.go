@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 )
+
 type AuthTemplate struct {
 	templates *template.Template
 }
@@ -18,24 +19,25 @@ type Errors struct {
 	Error string
 }
 type Info struct {
-	Client string
-	ClientSecret string
-	Scope []string
-	RedirectURI string
-	AuthEndpoint string
+	Client        string
+	ClientSecret  string
+	Scope         []string
+	RedirectURI   string
+	AuthEndpoint  string
 	TokenEndpoint string
-	Name string
+	Name          string
 	ClientLogoURI string
-	ClientURI string
+	ClientURI     string
 }
 type ClientInfo struct {
-	Client string
-	ClientSecret string
-	Name string
-	Scope []string
+	Client        string
+	ClientSecret  string
+	Name          string
+	Scope         []string
 	ClientLogoURI string
-	ClientURI string
-	RedirectURI string
+	ClientURI     string
+	RedirectURI   string
+	ReqID string
 }
 
 var CI = ClientInfo{
@@ -45,7 +47,7 @@ var CI = ClientInfo{
 	Scope:         []string{"foo", "bar"},
 	ClientLogoURI: "https://user-images.githubusercontent.com/67729473/120451954-d50bd800-c3cc-11eb-92dd-84e20cbd323c.png",
 	ClientURI:     "http://localhost:9000",
-	RedirectURI:     "http://localhost:9000/callback",
+	RedirectURI:   "http://localhost:9000/callback",
 }
 
 func (t *AuthTemplate) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
@@ -58,19 +60,19 @@ func main() {
 
 	e.Renderer = t
 
-	e.GET("/authorize",authorize)
-	e.GET("/",index)
-	e.GET("/error",errorHandler)
+	e.GET("/authorize", authorize)
+	e.GET("/", index)
+	e.GET("/error", errorHandler)
 
 	e.Logger.Fatal(e.Start(":9001"))
 
 }
 
 func errorHandler(c echo.Context) error {
-	
+
 	var e Errors
 	e.Error = "Invalid"
-	return c.Render(http.StatusInternalServerError,"error",e)
+	return c.Render(http.StatusInternalServerError, "error", e)
 }
 func index(c echo.Context) error {
 
@@ -83,46 +85,45 @@ func index(c echo.Context) error {
 		TokenEndpoint: "http://localhost:9001/token",
 	}
 
-	return c.Render(http.StatusOK,"index",info)
+	return c.Render(http.StatusOK, "index", info)
 }
 
 func authorize(c echo.Context) error {
 	var reqid string
-	uri,err:=url.ParseRequestURI(c.Request().RequestURI)
-	if err!=nil{
-		return c.String(http.StatusInternalServerError,err.Error())
+	uri, err := url.ParseRequestURI(c.Request().RequestURI)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
 	}
 	q := uri.Query()
-	if contains(q["client_id"],CI.Client) {
-		e := Errors{fmt.Sprintf("Unknown client %s",CI.Client)}
-		return c.Render(http.StatusBadRequest,"error",e)
-	}else if contains(q["redirect_uri"],CI.RedirectURI) {
-		e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ",CI.RedirectURI)}
-		return c.Render(http.StatusBadRequest,"error",e)
-	}else {
-		rscope := strings.Join(q["scope"],",")
-		cscope := strings.Join(CI.Scope,",")
-		if !strings.Contains(rscope,cscope)  {
-			urlParsed,err := url.Parse(q.Get("redirect_uri"))
+	fmt.Println(q.Get("client_id"))
+	client_id := q.Get("client_id")
+	if client_id != CI.Client {
+		e := Errors{fmt.Sprintf("Unknown client %s,%s", CI.Client, client_id)}
+		return c.Render(http.StatusBadRequest, "error", e)
+	} else if !contains(q["redirect_uri"], CI.RedirectURI) {
+		e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
+		return c.Render(http.StatusBadRequest, "error", e)
+	} else {
+		rscope := strings.Join(q["scope"], ",")
+		cscope := strings.Join(CI.Scope, ",")
+		if !strings.Contains(rscope, cscope) {
+			urlParsed, err := url.Parse(q.Get("redirect_uri"))
 			if err != nil {
-				e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ",CI.RedirectURI)}
-				return c.Render(http.StatusBadRequest,"error",e)
+				e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
+				return c.Render(http.StatusBadRequest, "error", e)
 			}
-			c.Redirect(http.StatusOK,urlParsed.String())
+			c.Redirect(http.StatusOK, urlParsed.String())
 		}
-		reqid,err = MakeRandomStr(8)
+		reqid, err = MakeRandomStr(8)
 		if err != nil {
-			return c.Render(http.StatusBadRequest,"error",Errors{err.Error()})
+			return c.Render(http.StatusBadRequest, "error", Errors{err.Error()})
 		}
-	}
 
-	return c.Render(http.StatusOK,"approve", struct {
-		Client string
-		ClientSecret string
-		RedirectURI string
-		Scope  []string
-		reqID  string
-	}{Client: CI.Client,ClientSecret: CI.ClientSecret,RedirectURI: CI.RedirectURI,Scope: CI.Scope,reqID: reqid})
+	}
+	CI.ReqID = reqid
+
+
+	return c.Render(http.StatusOK, "approve", CI)
 }
 func contains(s []string, e string) bool {
 	for _, v := range s {

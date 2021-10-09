@@ -1,4 +1,4 @@
-package main
+package Example
 
 import (
 	"context"
@@ -18,7 +18,7 @@ var (
 	key []byte =[]byte("test1234test1234")
 )
 
-func main() {
+func githubExample() {
 	clientId :=os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	port :="3001"//os.Getenv("PORT")

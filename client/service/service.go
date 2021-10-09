@@ -1,4 +1,4 @@
-package main
+package Example
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 
 var client *http.Client = http.DefaultClient
 
-func main() {
+func serviceExample() {
 	keyPath := os.Getenv("KEY_PATH")
 	issuer := os.Getenv("ISSUER")
 	port := "3001"//os.Getenv("PORT")

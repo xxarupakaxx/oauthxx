@@ -1,5 +1,4 @@
-package main
-
+package Example
 import (
 	"encoding/json"
 	"fmt"
@@ -19,7 +18,7 @@ var (
 	key = []byte("test1234test1234")
 )
 
-func main() {
+func appExample() {
 	clientID := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	keyPath := os.Getenv("KEY_PATH")

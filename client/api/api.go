@@ -1,4 +1,4 @@
-package main
+package Example
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ const (
 	protectedClaimURL = "/protected/{claim}/{value}"
 )
 
-func main() {
+func apiExample() {
 	err := godotenv.Load()
 	if err != nil {
 		logrus.Fatalln(".env no such file")

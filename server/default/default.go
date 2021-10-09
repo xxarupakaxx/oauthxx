@@ -1,4 +1,4 @@
-package main
+package Example
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"text/template"
 )
 
-func main() {
+func defaultExample() {
 	ctx := context.Background()
 	port:="9998"
 	config :=&op.Config{

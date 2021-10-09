@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
 	"log"
 	"math/rand"
@@ -12,6 +15,7 @@ import (
 	"net/url"
 	"strings"
 	"text/template"
+	"time"
 	"unsafe"
 )
 
@@ -188,9 +192,24 @@ func Token(c echo.Context) error {
 	if c.Request().URL.Query().Get("grant_type") == "authorization_code"{
 		code := codes[ c.Request().URL.Query().Get("code")]
 		if code.AuthorizationEndpointRequest != nil {
-			accessToken,err = MakeRandomStr(16)
+			accessToken,err := MakeRandomStr(16)
 			if err != nil {
 				log.Println(err.Error())
+			}
+			csope := strings.Join(code.Scope," ")
+			cli := DBconnect()
+			collection := cli.Database("grpc").Collection("test")
+			_, err = collection.InsertOne(context.Background(), struct {
+				accessToken string `bson:"access_token"`
+				clientId string `bson:"client_id"`
+				scope string `bson:"scope"`
+			}{
+				accessToken: accessToken,
+				clientId:    clientInfo[0],
+				scope:       csope,
+			})
+			if err != nil {
+				return c.String(http.StatusInternalServerError,err.Error())
 			}
 
 
@@ -223,4 +242,15 @@ func MakeRandomStr(digit uint32) (string, error) {
 		result += string(letters[int(v)%len(letters)])
 	}
 	return result, nil
+}
+func DBconnect() *mongo.Client {
+	cli,err := mongo.NewClient(options.Client().ApplyURI("mongodb://127.0.0.1:27017"))
+	if err != nil { log.Fatal(err) }
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	err = cli.Connect(ctx)
+	if err != nil { log.Fatal(err) }
+	defer cli.Disconnect(ctx)
+
+	return cli
 }

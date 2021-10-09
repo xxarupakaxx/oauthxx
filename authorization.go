@@ -1,15 +1,18 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
 	"text/template"
+	"unsafe"
 )
 
 type AuthTemplate struct {
@@ -166,9 +169,36 @@ func approve(c echo.Context) error {
 	return c.Redirect(http.StatusMovedPermanently,"http://localhost:9000")
 }
 
-/*func Token(c echo.Context) error {
+func Token(c echo.Context) error {
+	auth := c.Request().Header.Get("authorization")
+	dec,err := base64.StdEncoding.DecodeString(auth[len("Basic "):])
+	if err!=nil {
+		log.Println("Couldnot decode auth:%w",err)
+	}
+	clientCredentials := *(*string)(unsafe.Pointer(&dec))
+	clientInfo := strings.Split(clientCredentials,":")
+	if clientInfo[0] != CI.Client {
+		e := Errors{fmt.Sprintf("Unknown client %s,%s", CI.Client, clientInfo[0])}
+		return c.Render(http.StatusUnauthorized, "error", e)
+	}
+	if clientInfo[1] != CI.ClientSecret {
+		e := Errors{fmt.Sprintf("Mismatched client secret, expected %s got %s", CI.ClientSecret, clientInfo[1])}
+		return c.Render(http.StatusUnauthorized, "error", e)
+	}
+	if c.Request().URL.Query().Get("grant_type") == "authorization_code"{
+		code := codes[ c.Request().URL.Query().Get("code")]
+		if code.AuthorizationEndpointRequest != nil {
+			accessToken,err = MakeRandomStr(16)
+			if err != nil {
+				log.Println(err.Error())
+			}
 
-}*/
+
+
+		}
+	}
+
+}
 func contains(s []string, e string) bool {
 	for _, v := range s {
 		if e == v {

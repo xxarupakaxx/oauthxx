@@ -142,27 +142,33 @@ func approve(c echo.Context) error {
 		rscope := strings.Join(query["scope"], ",")
 		cscope := strings.Join(CI.Scope, ",")
 		if !strings.Contains(rscope,cscope) {
-			urlParsed, err := url.Parse(query.Get("redirect_uri"))
+			urlParsed := query.Get("redirect_uri")
+			urlParsed +="?state="
+			urlParsed += query.Get("state")
+			fmt.Println(urlParsed)
 			if err != nil {
 				e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
 				return c.Render(http.StatusBadRequest, "error", e)
 			}
-			return  c.Redirect(http.StatusMovedPermanently, urlParsed.String())
+			return  c.Redirect(http.StatusMovedPermanently, urlParsed)
 		}
 		codes[code] =ApproveInfo{
 			AuthorizationEndpointRequest: query,
 			Scope:                        query["scope"],
 		}
-		urlParsed, err := url.Parse(query.Get("redirect_uri"))
+		urlParsed := query.Get("redirect_uri")
 		if err != nil {
 			e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
 			return c.Render(http.StatusBadRequest, "error", e)
 		}
-		return c.Redirect(http.StatusMovedPermanently, urlParsed.String())
+		return  c.Redirect(http.StatusMovedPermanently, urlParsed)
 	}
 	return c.Redirect(http.StatusMovedPermanently,"http://localhost:9000")
 }
 
+/*func Token(c echo.Context) error {
+
+}*/
 func contains(s []string, e string) bool {
 	for _, v := range s {
 		if e == v {

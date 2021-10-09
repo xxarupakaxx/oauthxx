@@ -44,8 +44,8 @@ type ClientInfo struct {
 	ClientLogoURI string
 	ClientURI     string
 	RedirectURI   string
-	ReqID string
-	URL *url.URL
+	ReqID         string
+	URL           *url.URL
 }
 
 var CI = ClientInfo{
@@ -62,6 +62,7 @@ type ApproveInfo struct {
 	AuthorizationEndpointRequest url.Values
 	Scope                        []string
 }
+
 var codes map[string]ApproveInfo
 
 func (t *AuthTemplate) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
@@ -77,7 +78,8 @@ func main() {
 	e.GET("/authorize", authorize)
 	e.GET("/", index)
 	e.GET("/error", errorHandler)
-	e.POST("/approve",approve)
+	e.POST("/approve", approve)
+	e.POST("/token", Token)
 
 	e.Logger.Fatal(e.Start(":9001"))
 
@@ -144,22 +146,22 @@ func approve(c echo.Context) error {
 
 		code, err := MakeRandomStr(8)
 		if err != nil {
-			return c.Render(http.StatusInternalServerError,"error",Errors{err.Error()})
+			return c.Render(http.StatusInternalServerError, "error", Errors{err.Error()})
 		}
 		rscope := strings.Join(query["scope"], ",")
 		cscope := strings.Join(CI.Scope, ",")
-		if !strings.Contains(rscope,cscope) {
+		if !strings.Contains(rscope, cscope) {
 			urlParsed := query.Get("redirect_uri")
-			urlParsed +="?state="
+			urlParsed += "?state="
 			urlParsed += query.Get("state")
 			fmt.Println(urlParsed)
 			if err != nil {
 				e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
 				return c.Render(http.StatusBadRequest, "error", e)
 			}
-			return  c.Redirect(http.StatusMovedPermanently, urlParsed)
+			return c.Redirect(http.StatusMovedPermanently, urlParsed)
 		}
-		codes[code] =ApproveInfo{
+		codes[code] = ApproveInfo{
 			AuthorizationEndpointRequest: query,
 			Scope:                        query["scope"],
 		}
@@ -168,19 +170,19 @@ func approve(c echo.Context) error {
 			e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
 			return c.Render(http.StatusBadRequest, "error", e)
 		}
-		return  c.Redirect(http.StatusMovedPermanently, urlParsed)
+		return c.Redirect(http.StatusMovedPermanently, urlParsed)
 	}
-	return c.Redirect(http.StatusMovedPermanently,"http://localhost:9000")
+	return c.Redirect(http.StatusMovedPermanently, "http://localhost:9000")
 }
 
 func Token(c echo.Context) error {
 	auth := c.Request().Header.Get("authorization")
-	dec,err := base64.StdEncoding.DecodeString(auth[len("Basic "):])
-	if err!=nil {
-		log.Println("Couldnot decode auth:%w",err)
+	dec, err := base64.StdEncoding.DecodeString(auth[len("Basic "):])
+	if err != nil {
+		log.Println("Couldnot decode auth:%w", err)
 	}
 	clientCredentials := *(*string)(unsafe.Pointer(&dec))
-	clientInfo := strings.Split(clientCredentials,":")
+	clientInfo := strings.Split(clientCredentials, ":")
 	if clientInfo[0] != CI.Client {
 		e := Errors{fmt.Sprintf("Unknown client %s,%s", CI.Client, clientInfo[0])}
 		return c.Render(http.StatusUnauthorized, "error", e)
@@ -189,43 +191,45 @@ func Token(c echo.Context) error {
 		e := Errors{fmt.Sprintf("Mismatched client secret, expected %s got %s", CI.ClientSecret, clientInfo[1])}
 		return c.Render(http.StatusUnauthorized, "error", e)
 	}
-	if c.Request().URL.Query().Get("grant_type") == "authorization_code"{
-		code := codes[ c.Request().URL.Query().Get("code")]
+	if c.Request().URL.Query().Get("grant_type") == "authorization_code" {
+		code := codes[c.Request().URL.Query().Get("code")]
+		fmt.Println("codeの中身", code.AuthorizationEndpointRequest, code.Scope)
 		if code.AuthorizationEndpointRequest != nil {
-			accessToken,err := MakeRandomStr(16)
+			accessToken, err := MakeRandomStr(16)
 			if err != nil {
 				log.Println(err.Error())
 			}
-			csope := strings.Join(code.Scope," ")
+			csope := strings.Join(code.Scope, " ")
 			cli := DBconnect()
 			collection := cli.Database("grpc").Collection("test")
 			_, err = collection.InsertOne(context.Background(), struct {
 				accessToken string `bson:"access_token"`
-				clientId string `bson:"client_id"`
-				scope string `bson:"scope"`
+				clientId    string `bson:"client_id"`
+				scope       string `bson:"scope"`
 			}{
 				accessToken: accessToken,
 				clientId:    clientInfo[0],
 				scope:       csope,
 			})
 			if err != nil {
-				return c.String(http.StatusInternalServerError,err.Error())
+				return c.JSON(http.StatusInternalServerError, err.Error())
 			}
-			fmt.Printf("Issuing access token %s \n with scope %s",accessToken,csope)
+			fmt.Printf("Issuing access token %s \n with scope %s", accessToken, csope)
 
 			tokenRes := struct {
 				accessToken string
-				tokenType string
-				scope string
+				tokenType   string
+				scope       string
 			}{
 				accessToken: accessToken,
 				tokenType:   "Bearer",
 				scope:       csope,
 			}
-			return c.JSON(http.StatusOK,tokenRes)
+			fmt.Println("aaaaaaaaaaa", tokenRes.accessToken)
+			return c.JSON(http.StatusOK, tokenRes)
 		}
 	}
-	return c.String(http.StatusOK,"OK")
+	return c.JSON(http.StatusOK, "OK")
 }
 func contains(s []string, e string) bool {
 	for _, v := range s {
@@ -253,12 +257,16 @@ func MakeRandomStr(digit uint32) (string, error) {
 	return result, nil
 }
 func DBconnect() *mongo.Client {
-	cli,err := mongo.NewClient(options.Client().ApplyURI("mongodb://127.0.0.1:27017"))
-	if err != nil { log.Fatal(err) }
+	cli, err := mongo.NewClient(options.Client().ApplyURI("mongodb://127.0.0.1:27017"))
+	if err != nil {
+		log.Fatal(err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	err = cli.Connect(ctx)
-	if err != nil { log.Fatal(err) }
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer cli.Disconnect(ctx)
 
 	return cli

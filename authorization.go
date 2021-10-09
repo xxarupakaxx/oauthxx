@@ -93,8 +93,10 @@ func authorize(c echo.Context) error {
 		e := Errors{fmt.Sprintf("Unknown client %s",CI.Client)}
 		return c.Render(http.StatusBadRequest,"error",e)
 	}else if contains(q["redirect_uri"],CI.RedirectURI) {
-		e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ",CI.ClientURI)}
+		e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ",CI.RedirectURI)}
 		return c.Render(http.StatusBadRequest,"error",e)
+	}else {
+
 	}
 
 	return c.Render(http.StatusOK,"approve",CI)

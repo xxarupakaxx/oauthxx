@@ -38,6 +38,7 @@ type ClientInfo struct {
 	ClientURI     string
 	RedirectURI   string
 	ReqID string
+	URL *url.URL
 }
 
 var CI = ClientInfo{
@@ -49,6 +50,12 @@ var CI = ClientInfo{
 	ClientURI:     "http://localhost:9000",
 	RedirectURI:   "http://localhost:9000/callback",
 }
+
+type ApproveInfo struct {
+	AuthorizationEndpointRequest url.Values
+	Scope                        []string
+}
+var codes map[string]ApproveInfo
 
 func (t *AuthTemplate) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	return t.templates.ExecuteTemplate(w, name, data)
@@ -63,6 +70,7 @@ func main() {
 	e.GET("/authorize", authorize)
 	e.GET("/", index)
 	e.GET("/error", errorHandler)
+	e.POST("/approve",approve)
 
 	e.Logger.Fatal(e.Start(":9001"))
 
@@ -95,7 +103,6 @@ func authorize(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
 	q := uri.Query()
-	fmt.Println(q.Get("client_id"))
 	client_id := q.Get("client_id")
 	if client_id != CI.Client {
 		e := Errors{fmt.Sprintf("Unknown client %s,%s", CI.Client, client_id)}
@@ -118,13 +125,44 @@ func authorize(c echo.Context) error {
 		if err != nil {
 			return c.Render(http.StatusBadRequest, "error", Errors{err.Error()})
 		}
-
 	}
-	CI.ReqID = reqid
-
-
+	CI.URL = uri
+	fmt.Println(reqid)
 	return c.Render(http.StatusOK, "approve", CI)
 }
+
+func approve(c echo.Context) error {
+	query := CI.URL.Query()
+	if query.Get("response_type") == "code" {
+
+		code, err := MakeRandomStr(8)
+		if err != nil {
+			return c.Render(http.StatusInternalServerError,"error",Errors{err.Error()})
+		}
+		rscope := strings.Join(query["scope"], ",")
+		cscope := strings.Join(CI.Scope, ",")
+		if !strings.Contains(rscope,cscope) {
+			urlParsed, err := url.Parse(query.Get("redirect_uri"))
+			if err != nil {
+				e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
+				return c.Render(http.StatusBadRequest, "error", e)
+			}
+			return  c.Redirect(http.StatusMovedPermanently, urlParsed.String())
+		}
+		codes[code] =ApproveInfo{
+			AuthorizationEndpointRequest: query,
+			Scope:                        query["scope"],
+		}
+		urlParsed, err := url.Parse(query.Get("redirect_uri"))
+		if err != nil {
+			e := Errors{fmt.Sprintf("Mismatched redirect URI, expected %s ", CI.RedirectURI)}
+			return c.Render(http.StatusBadRequest, "error", e)
+		}
+		return c.Redirect(http.StatusMovedPermanently, urlParsed.String())
+	}
+	return c.Redirect(http.StatusMovedPermanently,"http://localhost:9000")
+}
+
 func contains(s []string, e string) bool {
 	for _, v := range s {
 		if e == v {

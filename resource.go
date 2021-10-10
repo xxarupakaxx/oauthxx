@@ -13,14 +13,24 @@ func (t *ResourceTemplate) Render(w io.Writer, name string, data interface{}, c 
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 func main() {
-	t:=&Template{templates: template.Must(template.ParseGlob("template/resource/*.html"))}
+	t:=&ResourceTemplate{templates: template.Must(template.ParseGlob("template/resource/*.html"))}
 
 	e:=echo.New()
 
 	e.Renderer = t
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK,"good")
-	})
+	e.GET("/", indexResource)
 
 	e.Logger.Debug(e.Start(":9002"))
+}
+
+func indexResource(c echo.Context) error {
+	return c.Render(http.StatusOK,"index",nil )
+}
+
+var resource  = struct {
+	name string `json:"name"`
+	description string `json:"description"`
+}{
+	name:        "Protected Resource",
+	description: "This data has been protected by OAuth 2.0",
 }

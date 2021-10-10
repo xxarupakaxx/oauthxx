@@ -5,7 +5,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"io"
 	"net/http"
-	"strings"
 	"text/template"
 )
 type ResourceTemplate struct {
@@ -21,6 +20,7 @@ func main() {
 	e.Static("/static","template/resource")
 	e.Renderer = t
 	e.GET("/", indexResource)
+	e.POST("/resource",postAccessToken)
 
 	e.Logger.Debug(e.Start(":9002"))
 }
@@ -37,15 +37,15 @@ var resource  = struct {
 	description: "This data has been protected by OAuth 2.0",
 }
 
-func getAccessToken(c echo.Context) error {
+func postAccessToken(c echo.Context) error {
 	auth := c.Request().Header.Get("authorization")
+	fmt.Println(auth)
 	var inToken string
-	if auth != "" && strings.Index(auth, "bearer") == 0 {
+	if auth != "" {
 		inToken = auth[len("bearer "):]
 	}
 
 	fmt.Println("Incoming token: ",inToken)
-	cli := DBconnect()
-	collection := cli.Database("grpc").Collection("test")
 
+	return c.JSON(http.StatusOK,resource)
 }

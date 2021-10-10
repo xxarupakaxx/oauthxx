@@ -67,7 +67,7 @@ func main() {
 	t := &AuthTemplate{templates: template.Must(template.ParseGlob("template/auth/*.html"))}
 
 	e := echo.New()
-
+	e.Static("/static","template/auth")
 	e.Renderer = t
 
 	e.GET("/authorize", authorize)

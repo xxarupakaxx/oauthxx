@@ -44,6 +44,31 @@ func main() {
 }
 
 func resourceClient(c echo.Context) error {
+	if accessToken =="" {
+		return c.Render(http.StatusBadRequest,"error", Errors{Error: "Missing AccessToken"})
+	}
+	fmt.Printf("making accessToken %s",accessToken)
+
+	req,err := http.NewRequest("POST","http://localhost:9002/resource",nil)
+	if err != nil {
+		return err
+	}
+
+	// Content-Type 設定
+	req.Header.Set("Authorization","Bearer "+ accessToken)
+	client := &http.Client{}
+	res ,err :=client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >=200 && res.StatusCode<300 {
+
+		body,_:= ioutil.ReadAll(res.Body)
+		return c.Render(http.StatusOK,"data",body)
+	}
+
 	return c.Render(http.StatusOK,"data",nil)
 }
 

@@ -67,7 +67,15 @@ func resourceClient(c echo.Context) error {
 	if res.StatusCode >=200 && res.StatusCode<300 {
 
 		body,_:= ioutil.ReadAll(res.Body)
-		return c.Render(http.StatusOK,"data",body)
+		data := struct {
+			Name string `json:"name"`
+			Description string `json:"description"`
+		}{}
+		if err:= json.Unmarshal(body,&data);err!=nil{
+			return c.Render(http.StatusInternalServerError,"error",nil)
+		}
+		fmt.Println(data)
+		return c.Render(http.StatusOK,"data",data)
 	}
 
 	return c.Render(http.StatusOK,"data",nil)

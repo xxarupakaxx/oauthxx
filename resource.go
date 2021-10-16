@@ -29,13 +29,7 @@ func indexResource(c echo.Context) error {
 	return c.Render(http.StatusOK,"index",nil )
 }
 
-var resource  = struct {
-	name string `json:"name"`
-	description string `json:"description"`
-}{
-	name:        "Protected Resource",
-	description: "This data has been protected by OAuth 2.0",
-}
+
 
 func postAccessToken(c echo.Context) error {
 	auth := c.Request().Header.Get("authorization")
@@ -46,6 +40,14 @@ func postAccessToken(c echo.Context) error {
 	}
 
 	fmt.Println("Incoming token: ",inToken)
+
+	var resource  = struct {
+		Name string `json:"name"`
+		Description string `json:"description"`
+	}{
+		Name:        "Protected Resource",
+		Description: "This data has been protected by OAuth 2.0",
+	}
 
 	return c.JSON(http.StatusOK,resource)
 }

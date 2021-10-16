@@ -181,6 +181,7 @@ func Token(c echo.Context) error {
 
 			accessToken, err := MakeRandomStr(16)
 			if err != nil {
+				fmt.Println("aaaaaaaaaaaaaa")
 				log.Println(err.Error())
 			}
 			csope := strings.Join(CI.Scope, " ")

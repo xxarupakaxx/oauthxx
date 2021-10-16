@@ -79,14 +79,16 @@ func callbackClient(c echo.Context) error {
 		return c.Render(http.StatusInternalServerError,"error",nil)
 	}
 	code := c.FormValue("code")
-	url:=c.Request().URL
-	url.Query().Add("grant_type","authorization_code")
-	url.Query().Add("code",code)
-	url.Query().Add("redirect_uri","http://localhost:9000/callback")
+	url:=url2.Values{}
+	url.Set("grant_type","authorization_code")
+	url.Set("code",code)
+	url.Set("redirect_uri","http://localhost:9000/callback")
 
-	req,err := http.NewRequest("POST","http://localhost:9001/token",strings.NewReader(url.String()))
+	req,err := http.NewRequest("POST","http://localhost:9001/token",strings.NewReader(url.Encode()))
+	fmt.Println(req,  "     req")
 	if err != nil {
-		return err
+		fmt.Println("request error")
+		return c.Render(http.StatusInternalServerError,"error",nil)
 	}
 
 	// Content-Type 設定
@@ -95,7 +97,8 @@ func callbackClient(c echo.Context) error {
 	client := &http.Client{}
 	res ,err :=client.Do(req)
 	if err != nil {
-		return err
+		fmt.Println("response error")
+		return c.Render(http.StatusInternalServerError,"error",nil)
 	}
 	defer res.Body.Close()
 

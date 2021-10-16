@@ -111,17 +111,15 @@ func authorizeClient(c echo.Context) error {
 	accessToken = ""
 	scope = ""
 	state,_ = cliMakeRandomStr(16);
+	url := url2.Values{}
+	url.Set("response_type","code")
+	url.Set("scope","foo bar")
+	url.Set("client_id","oauth-client-1")
+	url.Set("redirect_uri","http://localhost:9000/callback")
+	url.Set("state",state)
 
-	url,_ := url2.Parse("http://localhost:9001/authorize")
-	url.Query().Add("response_type","code")
-	url.Query().Add("scope","foo bar")
-	url.Query().Add("client_id","oauth-client-1")
-	url.Query().Add("redirect_uri","http://localhost:9000/callback")
-	url.Query().Add("state",state)
-
-	c.Request().URL = url
-	fmt.Println(url.String())
-	return c.Redirect(http.StatusFound,url.String())
+	fmt.Println("http://localhost:9001/authorize"+url.Encode())
+	return c.Redirect(http.StatusFound,"http://localhost:9001/authorize"+url.Encode())
 }
 
 

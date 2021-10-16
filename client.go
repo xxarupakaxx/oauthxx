@@ -76,7 +76,7 @@ func callbackClient(c echo.Context) error {
 	queryState := c.FormValue("state")
 	fmt.Println("state:",state,"query",queryState)
 	if state != queryState {
-		return c.Render(http.StatusInternalServerError,"error",ClientErrors{fmt.Sprintf("mismatch state:%s,%s",state,queryState)})
+		return c.Render(http.StatusInternalServerError,"error",nil)
 	}
 	code := c.FormValue("code")
 	url:=c.Request().URL
@@ -119,7 +119,7 @@ func authorizeClient(c echo.Context) error {
 	url.Set("state",state)
 
 	fmt.Println("http://localhost:9001/authorize"+url.Encode())
-	return c.Redirect(http.StatusFound,"http://localhost:9001/authorize"+url.Encode())
+	return c.Redirect(http.StatusFound,"http://localhost:9001/authorize?"+url.Encode())
 }
 
 

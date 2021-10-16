@@ -45,7 +45,7 @@ func main() {
 
 func resourceClient(c echo.Context) error {
 	if accessToken =="" {
-		return c.Render(http.StatusBadRequest,"error", Errors{Error: "Missing AccessToken"})
+		return c.Render(http.StatusBadRequest,"error", ClientErrors{Error: "Missing AccessToken"})
 	}
 	fmt.Printf("making accessToken %s",accessToken)
 

@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	url2 "net/url"
+	"strings"
 	"text/template"
 )
 
@@ -42,7 +45,6 @@ func main() {
 
 func resourceClient(c echo.Context) error {
 	return c.Render(http.StatusOK,"data",nil)
-
 }
 
 func callbackClient(c echo.Context) error {
@@ -50,6 +52,32 @@ func callbackClient(c echo.Context) error {
 	fmt.Println("state:",state,"query",queryState)
 	if state != queryState {
 		return c.Render(http.StatusInternalServerError,"error",ClientErrors{fmt.Sprintf("mismatch state:%s,%s",state,queryState)})
+	}
+	code := c.FormValue("code")
+	url:=c.Request().URL
+	url.Query().Add("grant_type","authorization_code")
+	url.Query().Add("code",code)
+	url.Query().Add("redirect_uri","http://localhost:9000/callback")
+
+	req,err := http.NewRequest("POST","http://localhost:9001/token",strings.NewReader(url.String()))
+	if err != nil {
+		return err
+	}
+
+	// Content-Type 設定
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization","Basic "+encodeClientCredentials("oauth-client-1","oauth-client-secret-1"))
+	client := &http.Client{}
+	res ,err :=client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >=200 && res.StatusCode<300 {
+
+		body,_:= ioutil.ReadAll(res.Body)
+		return c.Render(http.StatusOK,"index",body)
 	}
 	return c.Render(http.StatusOK,"index",nil)
 }
@@ -101,6 +129,9 @@ func cliMakeRandomStr(digit uint32) (string, error) {
 	return result, nil
 }
 
-
+func encodeClientCredentials(clientId, clientSecret string) string {
+	var a = clientId + ":" + clientSecret
+	return base64.StdEncoding.EncodeToString([]byte(a))
+}
 
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
@@ -101,11 +102,21 @@ func callbackClient(c echo.Context) error {
 		return c.Render(http.StatusInternalServerError,"error",nil)
 	}
 	defer res.Body.Close()
-
+	fmt.Println(res.StatusCode)
 	if res.StatusCode >=200 && res.StatusCode<300 {
-
+		data := struct {
+			AccessToken string `json:"access_token"`
+			TokenType string `json:"token_type"`
+			Scope string `json:"scope"`
+		}{}
 		body,_:= ioutil.ReadAll(res.Body)
-		return c.Render(http.StatusOK,"index",body)
+		if err:= json.Unmarshal(body,&data);err!=nil{
+			return c.Render(http.StatusInternalServerError,"error",nil)
+		}
+		fmt.Println(data)
+		accessToken = data.AccessToken
+		scope = data.Scope
+		return c.Render(http.StatusOK,"index", data)
 	}
 	return c.Render(http.StatusOK,"index",nil)
 }

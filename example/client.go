@@ -1,4 +1,4 @@
-package main
+package example
 
 import (
 	"encoding/base64"
@@ -35,10 +35,10 @@ func main() {
 	e.Renderer = t
 	e.Static("/static","template/client")
 
-	e.GET("/",indexClient)
-	e.GET("/authorize",authorizeClient)
-	e.GET("/callback",callbackClient)
-	e.GET("/fetch_resource",resourceClient)
+	e.GET("/", indexClient)
+	e.GET("/authorize", authorizeClient)
+	e.GET("/callback", callbackClient)
+	e.GET("/fetch_resource", resourceClient)
 
 
 	e.Logger.Fatal(e.Start(":9000"))
@@ -48,7 +48,7 @@ func resourceClient(c echo.Context) error {
 	if accessToken =="" {
 		return c.Render(http.StatusBadRequest,"error", ClientErrors{Error: "Missing AccessToken"})
 	}
-	fmt.Printf("making accessToken %s",accessToken)
+	fmt.Printf("making accessToken %s", accessToken)
 
 	req,err := http.NewRequest("POST","http://localhost:9002/resource",nil)
 	if err != nil {
@@ -56,7 +56,7 @@ func resourceClient(c echo.Context) error {
 	}
 
 	// Content-Type 設定
-	req.Header.Set("Authorization","Bearer "+ accessToken)
+	req.Header.Set("Authorization","Bearer "+accessToken)
 	client := &http.Client{}
 	res ,err :=client.Do(req)
 	if err != nil {
@@ -83,7 +83,7 @@ func resourceClient(c echo.Context) error {
 
 func callbackClient(c echo.Context) error {
 	queryState := c.FormValue("state")
-	fmt.Println("state:",state,"query",queryState)
+	fmt.Println("state:", state,"query",queryState)
 	if state != queryState {
 		return c.Render(http.StatusInternalServerError,"error",nil)
 	}
@@ -138,7 +138,7 @@ func authorizeClient(c echo.Context) error {
 	url.Set("scope","foo bar")
 	url.Set("client_id","oauth-client-1")
 	url.Set("redirect_uri","http://localhost:9000/callback")
-	url.Set("state",state)
+	url.Set("state", state)
 
 	fmt.Println("http://localhost:9001/authorize"+url.Encode())
 	return c.Redirect(http.StatusFound,"http://localhost:9001/authorize?"+url.Encode())
@@ -151,7 +151,7 @@ func indexClient(c echo.Context) error {
 		Scope string `json:"scope"`
 	}{
 		AccessToken: accessToken,
-		Scope: scope,
+		Scope:       scope,
 	}
 	return c.Render(http.StatusOK,"index",data)
 }

@@ -1,4 +1,4 @@
-package main
+package example
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ func main() {
 	e.Static("/static","template/resource")
 	e.Renderer = t
 	e.GET("/", indexResource)
-	e.POST("/resource",postAccessToken)
+	e.POST("/resource", postAccessToken)
 
 	e.Logger.Debug(e.Start(":9002"))
 }
